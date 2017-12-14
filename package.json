@@ -1,0 +1,25 @@
+{
+  "name": "@ctrlpanel/core",
+  "version": "0.0.0",
+  "license": "UNLICENSED",
+  "repository": "ctrl-alt-deseat/ctrlpanel-core",
+  "main": "build/core.js",
+  "types": "build/core.d.ts",
+  "scripts": {
+    "prepare": "tsc"
+  },
+  "dependencies": {
+    "array-buffer-to-hex": "^1.0.0",
+    "base32-decode": "^1.0.0",
+    "base32-encode": "^1.0.0",
+    "fast-json-patch": "^2.0.6",
+    "get-random-byte": "^1.0.1",
+    "hex-to-array-buffer": "^1.1.0",
+    "idb": "^2.0.4",
+    "integer-array-ops": "^1.0.0",
+    "secure-remote-password": "^0.2.3"
+  },
+  "devDependencies": {
+    "typescript": "^2.6.2"
+  }
+}
