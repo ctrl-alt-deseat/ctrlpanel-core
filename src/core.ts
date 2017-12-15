@@ -1,7 +1,7 @@
 import arrayBufferToHex = require('array-buffer-to-hex')
 import hexToArrayBuffer = require('hex-to-array-buffer')
 import srp = require('secure-remote-password/client')
-import { Operation } from 'fast-json-patch'
+import { applyPatch, Operation } from 'fast-json-patch'
 
 import ApiClient, { FinalizeLoginResponse, LoginSession, PaymentInformation, SubscriptionPlan, SubscriptionStatus } from './api-client'
 import CtrlpanelCrypto, { DecryptedEntry } from './crypto'
@@ -29,6 +29,22 @@ function parseSyncToken (input: string) {
 
 function stringifySyncToken (handle: string, secretKey: string) {
   return `${handle}${secretKey}`.replace(/-/g, '')
+}
+
+export interface Account {
+  handle: string
+  hostname: string
+  password: string
+}
+
+export interface InboxEntry {
+  hostname: string
+  email: string
+}
+
+export interface ParsedEntries {
+  accounts: { [key: string]: Account }
+  inbox: { [key: string]: InboxEntry }
 }
 
 export interface EmptyState {
@@ -357,22 +373,6 @@ export default class CtrlpanelCore {
   }
 
   /**
-   * Submit a patch as a changelog entry to the api.
-   *
-   * Returns a new connected state with updated `decryptedEntries`.
-   */
-  async submitPatch (state: ConnectedState, patch: Operation): Promise<ConnectedState> {
-    const { authToken, dataEncryptionKey, decryptedEntries } = state
-
-    const payload = await CtrlpanelCrypto.encryptPatch(patch, dataEncryptionKey)
-    const changelogEntry = await this.apiClient.postChangelogEntry(authToken, payload)
-
-    await this.storage.putChangelogEntries([changelogEntry])
-
-    return Object.assign({}, state, { decryptedEntries: [...decryptedEntries, { patch, ...payload }] })
-  }
-
-  /**
    * Update the payment information with the api.
    *
    * Returns a new connected state with updated `subscriptionStatus` and `trialDaysLeft`.
@@ -385,6 +385,15 @@ export default class CtrlpanelCore {
     return Object.assign({}, state, { subscriptionStatus: 'active', trialDaysLeft: 0 })
   }
 
+  /**
+   * Return a `ParsedEntries` structure from a unlocked or connected state.
+   *
+   * Use this function to get the actual data: the accounts and the inbox.
+   */
+  getParsedEntries (state: UnlockedState | ConnectedState) {
+    return applyPatch({ accounts: {}, inbox: {} }, state.decryptedEntries.map(entry => entry.patch)).newDocument as ParsedEntries
+  }
+
   /** Create a sync token from any state that has a `handle` and `secretKey` */
   getSyncToken (state: LockedState | UnlockedState | ConnectedState) {
     return stringifySyncToken(state.handle, state.secretKey)
@@ -393,5 +402,46 @@ export default class CtrlpanelCore {
   /** Get a list of subscription plans from the api */
   getSubscriptionPlans (): Promise<SubscriptionPlan[]> {
     return this.apiClient.getSubscriptionPlans()
+  }
+
+  /** Create a new account */
+  async createAccount (state: ConnectedState, id: string, account: Account) {
+    return this.submitPatch(state, { op: 'add', path: `/accounts/${id}`, value: account })
+  }
+
+  /** Remove an account */
+  async deleteAccount (state: ConnectedState, id: string) {
+    return this.submitPatch(state, { op: 'remove', path: `/accounts/${id}` })
+  }
+
+  /** Update an account */
+  async updateAccount (state: ConnectedState, id: string, account: Account) {
+    return this.submitPatch(state, { op: 'replace', path: `/accounts/${id}`, value: account })
+  }
+
+  /** Create a new inbox entry */
+  async createInboxEntry (state: ConnectedState, id: string, inboxEntry: InboxEntry) {
+    return this.submitPatch(state, { op: 'add', path: `/inbox/${id}`, value: inboxEntry })
+  }
+
+  /** Remove an inbox entry */
+  async deleteInboxEntry (state: ConnectedState, id: string) {
+    return this.submitPatch(state, { op: 'remove', path: `/inbox/${id}` })
+  }
+
+  /**
+   * Submit a patch as a changelog entry to the api.
+   *
+   * Returns a new connected state with updated `decryptedEntries`.
+   */
+  private async submitPatch (state: ConnectedState, patch: Operation): Promise<ConnectedState> {
+    const { authToken, dataEncryptionKey, decryptedEntries } = state
+
+    const payload = await CtrlpanelCrypto.encryptPatch(patch, dataEncryptionKey)
+    const changelogEntry = await this.apiClient.postChangelogEntry(authToken, payload)
+
+    await this.storage.putChangelogEntries([changelogEntry])
+
+    return Object.assign({}, state, { decryptedEntries: [...decryptedEntries, { patch, ...payload }] })
   }
 }
