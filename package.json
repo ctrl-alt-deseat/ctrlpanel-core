@@ -1,6 +1,6 @@
 {
   "name": "@ctrlpanel/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "UNLICENSED",
   "repository": "ctrl-alt-deseat/ctrlpanel-core",
   "main": "build/core.js",
