@@ -148,9 +148,7 @@ export default class CtrlpanelCore {
   }
 
   /** Signup a new user with the api, then return a connected state */
-  async signup (state: EmptyState, handle: string, secretKey: string, masterPassword: string): Promise<ConnectedState> {
-    const saveDevice = true
-
+  async signup (state: EmptyState, handle: string, secretKey: string, masterPassword: string, saveDevice: boolean = true): Promise<ConnectedState> {
     // Generate salts
     const dekSalt = srp.generateSalt()
     const srpSalt = srp.generateSalt()
