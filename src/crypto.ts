@@ -1,6 +1,8 @@
 import arrayBufferToHex = require('array-buffer-to-hex')
 import hexToArrayBuffer = require('hex-to-array-buffer')
 import ops = require('integer-array-ops')
+import pbkdf2 = require('@ctrlpanel/pbkdf2')
+import hkdf = require('@ctrlpanel/hkdf')
 
 import { Operation } from 'fast-json-patch'
 
@@ -8,8 +10,10 @@ import HumanFormat from './human-format'
 
 const PBKDF2_HASH = 'SHA-512'
 const PBKDF2_ITERATIONS = 500000
+const PBKDF2_KEYLEN = 32
 
 const HKDF_HASH = 'SHA-512'
+const HKDF_KEYLEN = 32
 
 const { TextDecoder, TextEncoder, crypto } = window
 
@@ -34,22 +38,6 @@ function generateAesGcmNonce () {
   return data
 }
 
-async function PBKDF2 (input: ArrayBuffer, salt: ArrayBuffer) {
-  const algo = { hash: PBKDF2_HASH, iterations: PBKDF2_ITERATIONS, name: 'PBKDF2', salt }
-  const baseKey = await crypto.subtle.importKey('raw', input, { name: 'PBKDF2' }, false, ['deriveKey'])
-  const key = await crypto.subtle.deriveKey(algo, baseKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
-
-  return crypto.subtle.exportKey('raw', key)
-}
-
-async function HKDF (salt: ArrayBuffer, input: ArrayBuffer, info: ArrayBuffer) {
-  const algo = { hash: HKDF_HASH, info, name: 'HKDF', salt }
-  const baseKey = await crypto.subtle.importKey('raw', input, { name: 'HKDF' }, false, ['deriveKey'])
-  const key = await crypto.subtle.deriveKey(algo as any, baseKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
-
-  return crypto.subtle.exportKey('raw', key)
-}
-
 export interface KeyDerivationInput {
   password: string
   salt: ArrayBuffer
@@ -58,8 +46,8 @@ export interface KeyDerivationInput {
 }
 
 async function deriveCombinedKey ({ password, salt, handle, secretKey }: KeyDerivationInput) {
-  const longPassword = PBKDF2(stringToArrayBuffer(password), salt)
-  const longAccountKey = HKDF(handle, secretKey, stringToArrayBuffer('long-secret-key'))
+  const longPassword = pbkdf2(stringToArrayBuffer(password), salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_HASH)
+  const longAccountKey = hkdf(handle, secretKey, stringToArrayBuffer('long-secret-key'), HKDF_KEYLEN, HKDF_HASH)
 
   return ops.xor(new Uint8Array(await longPassword), new Uint8Array(await longAccountKey)).buffer
 }
