@@ -1,0 +1,72 @@
+import uuid = require('uuid')
+import srp = require('secure-remote-password/server')
+
+import { Ephemeral } from 'secure-remote-password/server'
+
+import ApiClient, { SignupInput, FinalizeLoginInput, AuthToken, ChangelogEntryInput, ChangelogEntryOutput, PaymentInformation, SubscriptionStatus } from '../src/api-client'
+import HumanFormat from '../src/human-format'
+
+class MockApiClient implements ApiClient {
+  apiHost = ''
+
+  private users: (SignupInput & { id: string, subscriptionStatus: SubscriptionStatus })[] = []
+  private sessions: { [id: string]: { userId: string, serverEphemeral: Ephemeral } } = {}
+  private changelogEntries: { [userId: string]: ChangelogEntryOutput[] } = {}
+
+  async getSubscriptionPlans () { return [] }
+
+  async signup (data: SignupInput) {
+    const user = Object.assign({}, data, { id: uuid(), subscriptionStatus: 'trialing' as SubscriptionStatus })
+
+    this.users.push(user)
+
+    return { token: user.id }
+  }
+
+  async initiateLogin (handle: string) {
+    const user = this.users.find(u => u.handle === handle)
+    const serverEphemeral = srp.generateEphemeral(user.srpVerifier)
+    const id = uuid()
+
+    this.sessions[id] = { userId: user.id, serverEphemeral }
+
+    return { id, serverPublicEphemeral: serverEphemeral.public, salt: user.srpSalt }
+  }
+
+  async finalizeLogin (loginSessionId: string, { clientPublicEphemeral, clientSessionProof }: FinalizeLoginInput) {
+    const { userId, serverEphemeral } = this.sessions[loginSessionId]
+    const { handle, dekSalt, srpSalt, srpVerifier, subscriptionStatus } = this.users.find(u => u.id === userId)
+
+    const { proof } = srp.deriveSession(serverEphemeral, clientPublicEphemeral, srpSalt, HumanFormat.toHex(handle), srpVerifier, clientSessionProof)
+
+    return { proof, token: userId, dekSalt, subscriptionStatus, trialDaysLeft: (subscriptionStatus === 'active' ? 0 : 7) }
+  }
+
+  async deleteUser (token: AuthToken) {
+    const idx = this.users.findIndex(u => u.id === token)
+
+    if (idx === -1) throw Object.assign(new Error('User not found'), { statusCode: 404 })
+
+    this.users.splice(idx, 1)
+  }
+
+  async getChangelogEntries (token: AuthToken) {
+    return (this.changelogEntries[token] || [])
+  }
+
+  async postChangelogEntry (token: AuthToken, data: ChangelogEntryInput) {
+    if (!this.changelogEntries[token]) this.changelogEntries[token] = []
+
+    const entry = Object.assign({}, data, { id: uuid(), createdAt: new Date().toISOString() })
+
+    this.changelogEntries[token].push(entry)
+
+    return entry
+  }
+
+  async setPaymentInformation (token: AuthToken, data: PaymentInformation) {
+    this.users.find(u => u.id === token).subscriptionStatus = 'active'
+  }
+}
+
+export default MockApiClient

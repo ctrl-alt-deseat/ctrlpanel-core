@@ -6,7 +6,8 @@
   "main": "build/core.js",
   "types": "build/core.d.ts",
   "scripts": {
-    "prepare": "tsc"
+    "prepare": "tsc",
+    "test": "mocha './test/**/*.ts'"
   },
   "dependencies": {
     "@ctrlpanel/hkdf": "^1.0.0",
@@ -22,6 +23,13 @@
     "secure-remote-password": "^0.2.3"
   },
   "devDependencies": {
-    "typescript": "^2.6.2"
+    "@trust/webcrypto": "LinusU/webcrypto#172b474",
+    "@types/mocha": "^2.2.44",
+    "@types/node": "^8.5.1",
+    "@types/uuid": "^3.4.3",
+    "mocha": "^4.0.1",
+    "ts-node": "^4.0.2",
+    "typescript": "^2.6.2",
+    "uuid": "^3.1.0"
   }
 }
