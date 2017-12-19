@@ -7,6 +7,7 @@ import { EncryptedData } from './crypto'
 import HumanFormat from './human-format'
 
 const DB_NAME = 'vault'
+let DB_HANDLE: Promise<DB>
 
 export interface Credentials {
   handle: string
@@ -29,22 +30,24 @@ function parseCredentials (input: string): Credentials {
   return { handle, secretKey }
 }
 
-export default class LocalStorage {
-  private handle: Promise<DB>
-
-  constructor () {
-    this.handle = idb.open(DB_NAME, 1, (db) => {
+function getHandle () {
+  if (!DB_HANDLE) {
+    DB_HANDLE = idb.open(DB_NAME, 1, (db) => {
       const store = db.createObjectStore('changelogEntry', { autoIncrement: false, keyPath: 'id' })
 
       store.createIndex('createdAt', 'createdAt')
     })
   }
 
+  return DB_HANDLE
+}
+
+export default class LocalStorage {
   async clear () {
     window.localStorage.removeItem('credentials')
     window.localStorage.removeItem('fast-track')
 
-    const db = await this.handle
+    const db = await getHandle()
     const tx = db.transaction('changelogEntry', 'readwrite')
     const store = tx.objectStore('changelogEntry')
 
@@ -54,7 +57,7 @@ export default class LocalStorage {
   }
 
   async putChangelogEntries (changelogEntries: ChangelogEntryOutput[]) {
-    const db = await this.handle
+    const db = await getHandle()
     const tx = db.transaction('changelogEntry', 'readwrite')
     const store = tx.objectStore('changelogEntry')
 
@@ -64,7 +67,7 @@ export default class LocalStorage {
   }
 
   async getAllChangelogEntries () {
-    const db = await this.handle
+    const db = await getHandle()
     const tx = db.transaction('changelogEntry', 'readonly')
     const store = tx.objectStore('changelogEntry')
     const index = store.index('createdAt')
