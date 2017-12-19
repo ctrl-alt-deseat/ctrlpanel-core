@@ -88,9 +88,9 @@ class ApiClient {
     return request<SubscriptionPlan[]>(`${this.apiHost}/v1/subscription-plans`, { headers })
   }
 
-  async signup (data: SignupInput) {
+  async signup ({ handle, dekSalt, srpSalt, srpVerifier }: SignupInput) {
     const method = 'POST'
-    const body = JSON.stringify(data)
+    const body = JSON.stringify({ handle: HumanFormat.toHex(handle), dekSalt, srpSalt, srpVerifier })
     const headers = new Headers({ 'Accept': 'application/json', 'Content-Type': 'application/json' })
 
     return request<SignupResponse>(`${this.apiHost}/v1/users`, { method, body, headers })

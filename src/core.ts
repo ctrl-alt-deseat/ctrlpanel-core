@@ -165,7 +165,7 @@ export default class CtrlpanelCore {
     // Create user at the remote server
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: rawSrpSalt, handle: rawHandle, secretKey: rawSecretKey })
     const srpVerifier = srp.deriveVerifier(srpPrivateKey)
-    const { token } = await this.apiClient.signup({ handle: arrayBufferToHex(rawHandle), dekSalt, srpSalt, srpVerifier })
+    const { token } = await this.apiClient.signup({ handle, dekSalt, srpSalt, srpVerifier })
 
     // Derive data encryption key (DEK)
     const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: rawDekSalt, handle: rawHandle, secretKey: rawSecretKey })
