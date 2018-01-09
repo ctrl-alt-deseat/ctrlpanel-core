@@ -1,6 +1,7 @@
 import _ = require('./_shims')
 
 import assert = require('assert')
+import assertRejects = require('assert-rejects')
 
 import MockApiClient from './_api-client'
 import MockStorage from './_storage'
@@ -39,12 +40,33 @@ describe('Login', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.login(state, handle, secretKey, masterPassword, false)
+    const newState = await core.login(state, handle, secretKey, masterPassword, false)
 
-    assert.ok(state.authToken)
-    assert.strictEqual(state.decryptedEntries.length, 0)
-    assert.strictEqual(state.handle, handle)
-    assert.strictEqual(state.kind, 'connected')
-    assert.strictEqual(state.secretKey, secretKey)
+    assert.ok(newState.authToken)
+    assert.strictEqual(newState.decryptedEntries.length, 0)
+    assert.strictEqual(newState.handle, handle)
+    assert.strictEqual(newState.kind, 'connected')
+    assert.strictEqual(newState.secretKey, secretKey)
+  })
+
+  it('reports when handle not found', async function () {
+    if (state.kind !== 'empty') throw new Error('Expected an empty state')
+
+    await assertRejects(
+      core.login(state, 'x', secretKey, masterPassword, false),
+      (err) => err.code === 'HANDLE_NOT_FOUND'
+    )
+  })
+
+  it('reports when wrong secret key/master password', async function () {
+    this.timeout(10000)
+    this.slow(1300)
+
+    if (state.kind !== 'empty') throw new Error('Expected an empty state')
+
+    await assertRejects(
+      core.login(state, handle, secretKey, 'x', false),
+      (err) => err.code === 'WRONG_SECRET_KEY_OR_MASTER_PASSWORD'
+    )
   })
 })
