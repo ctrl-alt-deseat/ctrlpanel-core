@@ -70,5 +70,10 @@ describe('Changelog', () => {
 
     assert.strictEqual(state.decryptedEntries.length, 5)
     assert.deepStrictEqual(core.getParsedEntries(state), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data, [acc3Id]: acc3Data }, inbox: {} })
+
+    state = await core.deleteAccount(state, acc1Id)
+
+    assert.strictEqual(state.decryptedEntries.length, 6)
+    assert.deepStrictEqual(core.getParsedEntries(state), { accounts: { [acc2Id]: acc2Data, [acc3Id]: acc3Data }, inbox: {} })
   })
 })

@@ -3,7 +3,7 @@ import srp = require('secure-remote-password/server')
 
 import { Ephemeral } from 'secure-remote-password/server'
 
-import ApiClient, { SignupInput, FinalizeLoginInput, AuthToken, ChangelogEntryInput, ChangelogEntryOutput, PaymentInformation, SubscriptionStatus } from '../src/api-client'
+import ApiClient, { SignupInput, SubscriptionPlan, FinalizeLoginInput, AuthToken, ChangelogEntryInput, ChangelogEntryOutput, PaymentInformation, SubscriptionStatus } from '../src/api-client'
 import HumanFormat from '../src/human-format'
 
 class MockApiClient implements ApiClient {
@@ -13,7 +13,9 @@ class MockApiClient implements ApiClient {
   private sessions: { [id: string]: { userId: string, serverEphemeral: Ephemeral } } = {}
   private changelogEntries: { [userId: string]: ChangelogEntryOutput[] } = {}
 
-  async getSubscriptionPlans () { return [] }
+  async getSubscriptionPlans (): Promise<SubscriptionPlan[]> {
+    return [{ id: 'test', amount: 299, currency: 'USD', interval: 'month', intervalCount: 1, name: 'Test Plan', stripeKey: 'x', trialPeriodDays: null }]
+  }
 
   async signup (data: SignupInput) {
     const user = Object.assign({}, data, { id: uuid(), subscriptionStatus: 'trialing' as SubscriptionStatus })
