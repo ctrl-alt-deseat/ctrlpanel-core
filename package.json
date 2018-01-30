@@ -16,6 +16,8 @@
     "array-buffer-to-hex": "^1.0.0",
     "base32-decode": "^1.0.0",
     "base32-encode": "^1.0.0",
+    "decode-utf8": "^1.0.1",
+    "encode-utf8": "^1.0.1",
     "fast-json-patch": "^2.0.6",
     "get-random-byte": "^1.0.1",
     "hex-to-array-buffer": "^1.1.0",

@@ -1,4 +1,6 @@
 import arrayBufferToHex = require('array-buffer-to-hex')
+import decodeUtf8 = require('decode-utf8')
+import encodeUtf8 = require('encode-utf8')
 import hexToArrayBuffer = require('hex-to-array-buffer')
 import ops = require('integer-array-ops')
 import pbkdf2 = require('@ctrlpanel/pbkdf2')
@@ -15,17 +17,7 @@ const PBKDF2_KEYLEN = 32
 const HKDF_HASH = 'SHA-512'
 const HKDF_KEYLEN = 32
 
-const { TextDecoder, TextEncoder, crypto } = window
-
-function stringToArrayBuffer (input: string): ArrayBuffer {
-  const encoder = new TextEncoder('utf-8')
-  return encoder.encode(input)
-}
-
-function arrayBufferToString (input: ArrayBuffer): string {
-  const decoder = new TextDecoder('utf-8')
-  return decoder.decode(input)
-}
+const { crypto } = window
 
 function generateAesGcmNonce () {
   // Q: Why 12 bytes?
@@ -46,8 +38,8 @@ export interface KeyDerivationInput {
 }
 
 async function deriveCombinedKey ({ password, salt, handle, secretKey }: KeyDerivationInput) {
-  const longPassword = pbkdf2(stringToArrayBuffer(password), salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_HASH)
-  const longAccountKey = hkdf(handle, secretKey, stringToArrayBuffer('long-secret-key'), HKDF_KEYLEN, HKDF_HASH)
+  const longPassword = pbkdf2(encodeUtf8(password), salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_HASH)
+  const longAccountKey = hkdf(handle, secretKey, encodeUtf8('long-secret-key'), HKDF_KEYLEN, HKDF_HASH)
 
   return ops.xor(new Uint8Array(await longPassword), new Uint8Array(await longAccountKey)).buffer
 }
@@ -94,24 +86,24 @@ export interface DecryptedEntry extends EncryptedEntry {
 async function decryptEntries (dataEncryptionKey: DataEncryptionKey, encryptedEntries: EncryptedEntry[]): Promise<DecryptedEntry[]> {
   return Promise.all(encryptedEntries.map(async (entry) => {
     const plaintext = await decrypt(dataEncryptionKey, { ciphertext: entry.encryptedPatch, nonce: entry.nonce })
-    const patch = JSON.parse(arrayBufferToString(plaintext))
+    const patch = JSON.parse(decodeUtf8(plaintext))
 
     return Object.assign({}, entry, { patch })
   }))
 }
 
 async function encryptPatch (patch: Operation, dataEncryptionKey: DataEncryptionKey): Promise<EncryptedEntry> {
-  const enc = await encrypt(dataEncryptionKey, stringToArrayBuffer(JSON.stringify(patch)))
+  const enc = await encrypt(dataEncryptionKey, encodeUtf8(JSON.stringify(patch)))
 
   return { encryptedPatch: enc.ciphertext, nonce: enc.nonce }
 }
 
 async function encryptSrpPrivateKey (dataEncryptionKey: DataEncryptionKey, srpPrivateKey: string) {
-  return encrypt(dataEncryptionKey, stringToArrayBuffer(srpPrivateKey))
+  return encrypt(dataEncryptionKey, encodeUtf8(srpPrivateKey))
 }
 
 async function decryptSrpPrivateKey (dataEncryptionKey: DataEncryptionKey, encryptedData: EncryptedData) {
-  return arrayBufferToString(await decrypt(dataEncryptionKey, encryptedData))
+  return decodeUtf8(await decrypt(dataEncryptionKey, encryptedData))
 }
 
 export default { deriveDataEncryptionKey, deriveSrpPrivateKey, decryptEntries, encryptPatch, encryptSrpPrivateKey, decryptSrpPrivateKey }
