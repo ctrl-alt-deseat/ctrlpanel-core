@@ -69,6 +69,8 @@ class MockApiClient implements ApiClient {
   async setPaymentInformation (token: AuthToken, data: PaymentInformation) {
     this.users.find(u => u.id === token).hasPaymentInformation = true
     this.users.find(u => u.id === token).subscriptionStatus = 'active'
+
+    return { hasPaymentInformation: true, subscriptionStatus: 'active' as SubscriptionStatus, trialDaysLeft: 0 }
   }
 }
 

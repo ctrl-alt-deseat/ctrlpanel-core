@@ -400,9 +400,9 @@ export default class CtrlpanelCore {
   async setPaymentInformation (state: ConnectedState, paymentInformation: PaymentInformation): Promise<ConnectedState> {
     const { authToken } = state
 
-    await this.apiClient.setPaymentInformation(authToken, paymentInformation)
+    const { hasPaymentInformation, subscriptionStatus, trialDaysLeft } = await this.apiClient.setPaymentInformation(authToken, paymentInformation)
 
-    return Object.assign({}, state, { subscriptionStatus: 'active', trialDaysLeft: 0 })
+    return Object.assign({}, state, { hasPaymentInformation, subscriptionStatus, trialDaysLeft })
   }
 
   /**

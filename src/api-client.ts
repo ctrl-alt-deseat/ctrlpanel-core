@@ -65,6 +65,12 @@ export interface PaymentInformation {
   email: string
 }
 
+export interface PaymentInformationOutput {
+  hasPaymentInformation: boolean
+  subscriptionStatus: SubscriptionStatus
+  trialDaysLeft: number
+}
+
 function parseResponse (response: Response) {
   if (response.status === 204) return Promise.resolve(undefined)
   if (response.ok) return response.json()
@@ -139,7 +145,7 @@ class ApiClient {
     const body = JSON.stringify(data)
     const headers = new Headers({ 'Accept': 'application/json', 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' })
 
-    return request<void>(`${this.apiHost}/v1/payment-information`, { method, headers, body })
+    return request<PaymentInformationOutput>(`${this.apiHost}/v1/payment-information`, { method, headers, body })
   }
 }
 
