@@ -42,6 +42,7 @@ export interface FinalizeLoginResponse {
   proof: string
   token: string
   dekSalt: string
+  hasPaymentInformation: boolean
   subscriptionStatus: SubscriptionStatus
   trialDaysLeft: number
 }

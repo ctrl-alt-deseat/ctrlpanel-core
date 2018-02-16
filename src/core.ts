@@ -80,6 +80,7 @@ export interface ConnectedState {
   saveDevice: boolean
   secretKey: string
   srpPrivateKey: string
+  hasPaymentInformation: boolean
   subscriptionStatus: SubscriptionStatus
   trialDaysLeft: number
 }
@@ -189,6 +190,7 @@ export default class CtrlpanelCore {
       saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
+      hasPaymentInformation: false,
       subscriptionStatus: 'trialing',
       trialDaysLeft: 7,
     }
@@ -246,6 +248,7 @@ export default class CtrlpanelCore {
       saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
+      hasPaymentInformation: loginResult.hasPaymentInformation,
       subscriptionStatus: loginResult.subscriptionStatus,
       trialDaysLeft: loginResult.trialDaysLeft,
     }
@@ -336,6 +339,7 @@ export default class CtrlpanelCore {
       saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
+      hasPaymentInformation: loginResult.hasPaymentInformation,
       subscriptionStatus: loginResult.subscriptionStatus,
       trialDaysLeft: loginResult.trialDaysLeft,
     }
@@ -363,6 +367,7 @@ export default class CtrlpanelCore {
       saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
+      hasPaymentInformation: loginResult.hasPaymentInformation,
       subscriptionStatus: loginResult.subscriptionStatus,
       trialDaysLeft: loginResult.trialDaysLeft,
     }

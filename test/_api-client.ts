@@ -9,7 +9,7 @@ import HumanFormat from '../src/human-format'
 class MockApiClient implements ApiClient {
   apiHost = ''
 
-  private users: (SignupInput & { id: string, subscriptionStatus: SubscriptionStatus })[] = []
+  private users: (SignupInput & { id: string, hasPaymentInformation: boolean, subscriptionStatus: SubscriptionStatus })[] = []
   private sessions: { [id: string]: { userId: string, serverEphemeral: Ephemeral } } = {}
   private changelogEntries: { [userId: string]: ChangelogEntryOutput[] } = {}
 
@@ -18,7 +18,7 @@ class MockApiClient implements ApiClient {
   }
 
   async signup (data: SignupInput) {
-    const user = Object.assign({}, data, { id: uuid(), subscriptionStatus: 'trialing' as SubscriptionStatus })
+    const user = Object.assign({}, data, { id: uuid(), hasPaymentInformation: true, subscriptionStatus: 'trialing' as SubscriptionStatus })
 
     this.users.push(user)
 
@@ -37,11 +37,11 @@ class MockApiClient implements ApiClient {
 
   async finalizeLogin (loginSessionId: string, { clientPublicEphemeral, clientSessionProof }: FinalizeLoginInput) {
     const { userId, serverEphemeral } = this.sessions[loginSessionId]
-    const { handle, dekSalt, srpSalt, srpVerifier, subscriptionStatus } = this.users.find(u => u.id === userId)
+    const { handle, dekSalt, srpSalt, srpVerifier, hasPaymentInformation, subscriptionStatus } = this.users.find(u => u.id === userId)
 
     const { proof } = srp.deriveSession(serverEphemeral, clientPublicEphemeral, srpSalt, HumanFormat.toHex(handle), srpVerifier, clientSessionProof)
 
-    return { proof, token: userId, dekSalt, subscriptionStatus, trialDaysLeft: (subscriptionStatus === 'active' ? 0 : 7) }
+    return { proof, token: userId, dekSalt, hasPaymentInformation, subscriptionStatus, trialDaysLeft: (subscriptionStatus === 'active' ? 0 : 7) }
   }
 
   async deleteUser (token: AuthToken) {
@@ -67,6 +67,7 @@ class MockApiClient implements ApiClient {
   }
 
   async setPaymentInformation (token: AuthToken, data: PaymentInformation) {
+    this.users.find(u => u.id === token).hasPaymentInformation = true
     this.users.find(u => u.id === token).subscriptionStatus = 'active'
   }
 }
