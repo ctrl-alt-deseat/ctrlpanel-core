@@ -23,7 +23,8 @@
     "hex-to-array-buffer": "^1.1.0",
     "idb": "^2.0.4",
     "integer-array-ops": "^1.0.0",
-    "secure-remote-password": "^0.2.3"
+    "secure-remote-password": "^0.2.3",
+    "uuid": "^3.2.1"
   },
   "devDependencies": {
     "@trust/webcrypto": "LinusU/webcrypto#172b474",
@@ -34,7 +35,6 @@
     "mocha": "^4.0.1",
     "nyc": "^11.3.0",
     "ts-node": "^4.0.2",
-    "typescript": "^2.6.2",
-    "uuid": "^3.1.0"
+    "typescript": "^2.6.2"
   }
 }

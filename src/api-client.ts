@@ -71,6 +71,11 @@ export interface PaymentInformationOutput {
   trialDaysLeft: number
 }
 
+export interface DeseatmeExport {
+  email: string
+  domains: string[]
+}
+
 function parseResponse (response: Response) {
   if (response.status === 204) return Promise.resolve(undefined)
   if (response.ok) return response.json()
@@ -84,9 +89,11 @@ function request<T> (input: RequestInfo, init?: RequestInit): Promise<T> {
 
 class ApiClient {
   readonly apiHost: string
+  readonly deseatmeApiHost: string
 
-  constructor (apiHost: string) {
+  constructor (apiHost: string, deseatmeApiHost: string) {
     this.apiHost = apiHost
+    this.deseatmeApiHost = deseatmeApiHost
   }
 
   async getSubscriptionPlans () {
@@ -146,6 +153,12 @@ class ApiClient {
     const headers = new Headers({ 'Accept': 'application/json', 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' })
 
     return request<PaymentInformationOutput>(`${this.apiHost}/v1/payment-information`, { method, headers, body })
+  }
+
+  async getDeseatmeExport (exportToken: string) {
+    const headers = new Headers({ 'Accept': 'application/json' })
+
+    return request<DeseatmeExport>(`${this.deseatmeApiHost}/v1/export/${exportToken}`, { headers })
   }
 }
 

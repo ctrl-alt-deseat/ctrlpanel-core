@@ -2,8 +2,9 @@ import arrayBufferToHex = require('array-buffer-to-hex')
 import hexToArrayBuffer = require('hex-to-array-buffer')
 import srp = require('secure-remote-password/client')
 import { applyPatch, Operation } from 'fast-json-patch'
+import uuid = require('uuid')
 
-import ApiClient, { FinalizeLoginResponse, LoginSession, PaymentInformation, SubscriptionPlan, SubscriptionStatus } from './api-client'
+import ApiClient, { FinalizeLoginResponse, LoginSession, PaymentInformation, SubscriptionPlan, SubscriptionStatus, DeseatmeExport } from './api-client'
 import CtrlpanelCrypto, { DecryptedEntry } from './crypto'
 import HumanFormat from './human-format'
 import LocalStorage, { Credentials } from './local-storage'
@@ -103,8 +104,8 @@ export default class CtrlpanelCore {
   private apiClient: ApiClient
   private storage: LocalStorage
 
-  constructor (apiHost: string = 'https://api.ctrlpanel.io') {
-    this.apiClient = new ApiClient(apiHost)
+  constructor (apiHost: string = 'https://api.ctrlpanel.io', deseatmeApiHost: string = 'https://api.deseat.me') {
+    this.apiClient = new ApiClient(apiHost, deseatmeApiHost)
     this.storage = new LocalStorage()
   }
 
@@ -447,6 +448,22 @@ export default class CtrlpanelCore {
   /** Remove an inbox entry */
   async deleteInboxEntry (state: ConnectedState, id: string) {
     return this.submitPatch(state, { op: 'remove', path: `/inbox/${id}` })
+  }
+
+  /**
+   * Import domains from deseat.me into the inbox.
+   *
+   * This function will call the deseat.me api and fetch a list of exported domains, using the
+   * provided export token. Each of those domains will then be added as an entry to the inbox.
+   */
+  async importFromDeseatme (state: ConnectedState, exportToken: string) {
+    const data = await this.apiClient.getDeseatmeExport(exportToken)
+
+    for (const domain of data.domains) {
+      state = await this.createInboxEntry(state, uuid(), { hostname: domain, email: data.email })
+    }
+
+    return state
   }
 
   /**

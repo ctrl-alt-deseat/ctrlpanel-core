@@ -8,6 +8,7 @@ import HumanFormat from '../src/human-format'
 
 class MockApiClient implements ApiClient {
   apiHost = ''
+  deseatmeApiHost = ''
 
   private users: (SignupInput & { id: string, hasPaymentInformation: boolean, subscriptionStatus: SubscriptionStatus })[] = []
   private sessions: { [id: string]: { userId: string, serverEphemeral: Ephemeral } } = {}
@@ -71,6 +72,10 @@ class MockApiClient implements ApiClient {
     this.users.find(u => u.id === token).subscriptionStatus = 'active'
 
     return { hasPaymentInformation: true, subscriptionStatus: 'active' as SubscriptionStatus, trialDaysLeft: 0 }
+  }
+
+  async getDeseatmeExport (exportToken: string) {
+    return { email: 'test@example.com', domains: ['a.deseat.me', 'b.deseat.me'] }
   }
 }
 
