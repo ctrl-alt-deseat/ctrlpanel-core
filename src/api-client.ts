@@ -59,11 +59,20 @@ export interface ChangelogEntryOutput {
   createdAt: string
 }
 
-export interface PaymentInformation {
+
+export interface ApplePaymentInformation {
+  type: 'apple'
+  transactionIdentifier: string
+}
+
+export interface StripePaymentInformation {
+  type?: 'stripe'
   plan: string
   token: string
   email: string
 }
+
+export type PaymentInformation = ApplePaymentInformation | StripePaymentInformation
 
 export interface PaymentInformationOutput {
   hasPaymentInformation: boolean
