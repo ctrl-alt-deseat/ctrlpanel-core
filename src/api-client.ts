@@ -59,7 +59,6 @@ export interface ChangelogEntryOutput {
   createdAt: string
 }
 
-
 export interface ApplePaymentInformation {
   type: 'apple'
   transactionIdentifier: string
