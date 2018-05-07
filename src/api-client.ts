@@ -11,7 +11,6 @@ export interface SubscriptionPlan {
   id: string
   interval: 'day' | 'week' | 'month' | 'year'
   intervalCount: number
-  name: string
   stripeKey: string
   trialPeriodDays: number
 }
