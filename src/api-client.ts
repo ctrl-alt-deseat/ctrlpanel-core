@@ -68,6 +68,7 @@ export interface StripePaymentInformation {
   plan: string
   token: string
   email: string
+  coupon?: string | null
 }
 
 export type PaymentInformation = ApplePaymentInformation | StripePaymentInformation
