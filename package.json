@@ -5,6 +5,9 @@
   "repository": "ctrl-alt-deseat/ctrlpanel-core",
   "main": "build/core.js",
   "types": "build/core.d.ts",
+  "files": [
+    "build/"
+  ],
   "scripts": {
     "prepare": "tsc",
     "test": "nyc --extension .ts --require ts-node/register _mocha './test/**/*.ts'",
