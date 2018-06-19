@@ -104,10 +104,10 @@ class ApiClient {
     this.deseatmeApiHost = deseatmeApiHost
   }
 
-  async getSubscriptionPlans () {
+  async getSubscriptionPlans (withTrial: boolean) {
     const headers = new Headers({ 'Accept': 'application/json' })
 
-    return request<SubscriptionPlan[]>(`${this.apiHost}/v1/subscription-plans`, { headers })
+    return request<SubscriptionPlan[]>(`${this.apiHost}/v1/subscription-plans?trial=${withTrial}`, { headers })
   }
 
   async signup ({ handle, dekSalt, srpSalt, srpVerifier }: SignupInput) {

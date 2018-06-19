@@ -421,8 +421,8 @@ export default class CtrlpanelCore {
   }
 
   /** Get a list of subscription plans from the api */
-  getSubscriptionPlans (): Promise<SubscriptionPlan[]> {
-    return this.apiClient.getSubscriptionPlans()
+  getSubscriptionPlans (withTrial: boolean = true): Promise<SubscriptionPlan[]> {
+    return this.apiClient.getSubscriptionPlans(withTrial)
   }
 
   /** Create a new account */
