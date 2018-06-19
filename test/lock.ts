@@ -36,7 +36,7 @@ describe('Lock / Unlock', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.signup(state, handle, secretKey, masterPassword, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
     state = await core.createAccount(state, acc1Id, acc1Data)
     state = await core.createAccount(state, acc2Id, acc2Data)
   })
@@ -55,7 +55,7 @@ describe('Lock / Unlock', () => {
     assert.strictEqual(state.kind, 'locked')
     assert.strictEqual((state as any).decryptedEntries, undefined)
 
-    state = await core.unlock(state, masterPassword)
+    state = await core.unlock(state, { masterPassword })
 
     if (state.kind !== 'connected') throw new Error('Expected a connected state')
 

@@ -42,7 +42,7 @@ describe('Changelog', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.signup(state, handle, secretKey, masterPassword, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
   })
 
   it('derives a single state from changelog entries', async function () {

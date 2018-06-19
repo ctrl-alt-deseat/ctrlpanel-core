@@ -31,7 +31,7 @@ describe('Login', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    await core.signup(state, handle, secretKey, masterPassword, false)
+    await core.signup(state, { handle, secretKey, masterPassword }, false)
   })
 
   it('performs a login against the api', async function () {
@@ -40,7 +40,7 @@ describe('Login', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    const newState = await core.login(state, handle, secretKey, masterPassword, false)
+    const newState = await core.login(state, { handle, secretKey, masterPassword }, false)
 
     assert.ok(newState.authToken)
     assert.strictEqual(newState.decryptedEntries.length, 0)
@@ -53,7 +53,7 @@ describe('Login', () => {
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
     await assertRejects(
-      core.login(state, 'x', secretKey, masterPassword, false),
+      core.login(state, { handle: 'x', secretKey, masterPassword }, false),
       (err) => err.code === 'HANDLE_NOT_FOUND'
     )
   })
@@ -65,7 +65,7 @@ describe('Login', () => {
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
     await assertRejects(
-      core.login(state, handle, secretKey, 'x', false),
+      core.login(state, { handle, secretKey, masterPassword: 'x' }, false),
       (err) => err.code === 'WRONG_SECRET_KEY_OR_MASTER_PASSWORD'
     )
   })

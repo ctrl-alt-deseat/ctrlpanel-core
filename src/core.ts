@@ -150,31 +150,31 @@ export default class CtrlpanelCore {
   }
 
   /** Signup a new user with the api, then return a connected state */
-  async signup (state: EmptyState, handle: string, secretKey: string, masterPassword: string, saveDevice: boolean = true): Promise<ConnectedState> {
+  async signup (state: EmptyState, info: { handle: string, secretKey: string, masterPassword: string }, saveDevice: boolean = true): Promise<ConnectedState> {
     // Generate salts
     const dekSalt = srp.generateSalt()
     const srpSalt = srp.generateSalt()
 
     // The user should be able to enter the password with or without spaces
-    const cleanPassword = removeWhitespace(masterPassword)
+    const cleanPassword = removeWhitespace(info.masterPassword)
 
     // Raw values
     const rawDekSalt = hexToArrayBuffer(dekSalt)
     const rawSrpSalt = hexToArrayBuffer(srpSalt)
-    const rawHandle = HumanFormat.parse(handle)
-    const rawSecretKey = HumanFormat.parse(secretKey)
+    const rawHandle = HumanFormat.parse(info.handle)
+    const rawSecretKey = HumanFormat.parse(info.secretKey)
 
     // Create user at the remote server
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: rawSrpSalt, handle: rawHandle, secretKey: rawSecretKey })
     const srpVerifier = srp.deriveVerifier(srpPrivateKey)
-    const { token } = await this.apiClient.signup({ handle, dekSalt, srpSalt, srpVerifier })
+    const { token } = await this.apiClient.signup({ handle: info.handle, dekSalt, srpSalt, srpVerifier })
 
     // Derive data encryption key (DEK)
     const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: rawDekSalt, handle: rawHandle, secretKey: rawSecretKey })
 
     if (saveDevice) {
       // Store handle and secret key for automatic login
-      this.storage.writeCredentials({ handle, secretKey })
+      this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
 
       // Store Fast Track information for login without online server
       const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(dataEncryptionKey, srpPrivateKey)
@@ -187,9 +187,9 @@ export default class CtrlpanelCore {
       authToken: token,
       dataEncryptionKey: dataEncryptionKey,
       decryptedEntries: [],
-      handle: handle,
+      handle: info.handle,
       saveDevice: saveDevice,
-      secretKey: secretKey,
+      secretKey: info.secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: false,
       subscriptionStatus: 'trialing',
@@ -198,26 +198,26 @@ export default class CtrlpanelCore {
   }
 
   /** Login as an existing user with the api, then return a connected state */
-  async login (state: EmptyState, handle: string, secretKey: string, masterPassword: string, saveDevice: boolean): Promise<ConnectedState> {
+  async login (state: EmptyState, info: { handle: string, secretKey: string, masterPassword: string }, saveDevice: boolean): Promise<ConnectedState> {
     // Generate ephemeral pair
     const ephemeral = srp.generateEphemeral()
 
     // Raw values
-    const rawHandle = HumanFormat.parse(handle)
-    const rawSecretKey = HumanFormat.parse(secretKey)
+    const rawHandle = HumanFormat.parse(info.handle)
+    const rawSecretKey = HumanFormat.parse(info.secretKey)
 
     let loginSession: LoginSession
     try {
-      loginSession = await this.apiClient.initiateLogin(handle)
+      loginSession = await this.apiClient.initiateLogin(info.handle)
     } catch (err) {
       throw Object.assign(new Error('Failed to login'), { code: 'HANDLE_NOT_FOUND', originalError: err })
     }
 
     // The user should be able to enter the password with or without spaces
-    const cleanPassword = removeWhitespace(masterPassword)
+    const cleanPassword = removeWhitespace(info.masterPassword)
 
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: hexToArrayBuffer(loginSession.salt), handle: rawHandle, secretKey: rawSecretKey })
-    const srpSession = srp.deriveSession(ephemeral, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(handle), srpPrivateKey)
+    const srpSession = srp.deriveSession(ephemeral, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(info.handle), srpPrivateKey)
 
     let loginResult: FinalizeLoginResponse
     try {
@@ -232,7 +232,7 @@ export default class CtrlpanelCore {
 
     if (saveDevice) {
       // Store handle and secret key for automatic login
-      this.storage.writeCredentials({ handle, secretKey })
+      this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
 
       // Store Fast Track information for login without online server
       const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(await dataEncryptionKeyPromise, srpPrivateKey)
@@ -245,9 +245,9 @@ export default class CtrlpanelCore {
       authToken: loginResult.token,
       dataEncryptionKey: await dataEncryptionKeyPromise,
       decryptedEntries: [],
-      handle: handle,
+      handle: info.handle,
       saveDevice: saveDevice,
-      secretKey: secretKey,
+      secretKey: info.secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: loginResult.hasPaymentInformation,
       subscriptionStatus: loginResult.subscriptionStatus,
@@ -262,7 +262,7 @@ export default class CtrlpanelCore {
    * return a unlocked state. Otherwise a login with the api will be performed
    * and a connected state will be returned.
    */
-  async unlock (state: LockedState, masterPassword: string): Promise<UnlockedState | ConnectedState> {
+  async unlock (state: LockedState, info: { masterPassword: string }): Promise<UnlockedState | ConnectedState> {
     // Read credentials
     const { handle, saveDevice, secretKey } = state
 
@@ -271,7 +271,7 @@ export default class CtrlpanelCore {
     const rawSecretKey = HumanFormat.parse(secretKey)
 
     // The user should be able to enter the password with or without spaces
-    const cleanPassword = removeWhitespace(masterPassword)
+    const cleanPassword = removeWhitespace(info.masterPassword)
 
     // Read possibly stored fast track data
     const fastTrack = this.storage.readFastTrack()

@@ -45,7 +45,7 @@ describe('Trial', () => {
     const secretKey = Core.randomSecretKey()
     const masterPassword = Core.randomMasterPassword()
 
-    state = await core.signup(state, handle, secretKey, masterPassword, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
 
     assert.strictEqual(state.kind, 'connected')
     assert.strictEqual(state.subscriptionStatus, 'trialing')

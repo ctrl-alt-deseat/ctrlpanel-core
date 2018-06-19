@@ -36,7 +36,7 @@ describe('Import', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.signup(state, handle, secretKey, masterPassword, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
   })
 
   it('imports accounts from deseat.me', async function () {

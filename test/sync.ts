@@ -43,7 +43,7 @@ describe('Sync', () => {
 
     if (stateA.kind !== 'empty') throw new Error('Expected an empty state')
 
-    stateA = await core.signup(stateA, handle, secretKey, masterPassword, false)
+    stateA = await core.signup(stateA, { handle, secretKey, masterPassword }, false)
   })
 
   before('create first account', async function () {
@@ -71,7 +71,7 @@ describe('Sync', () => {
     if (stateB.kind !== 'locked') throw new Error('Expected a locked state')
 
     // Unlock second client
-    stateB = await core.unlock(stateB, masterPassword)
+    stateB = await core.unlock(stateB, { masterPassword })
     if (stateB.kind !== 'connected') throw new Error('Expected a connected state')
 
     // Perform sync
