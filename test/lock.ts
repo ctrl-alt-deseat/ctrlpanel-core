@@ -1,9 +1,8 @@
-import _ = require('./_shims')
-
 import assert = require('assert')
+import assertRejects = require('assert-rejects')
+import FannyPackMemory = require('@fanny-pack/memory')
 
 import MockApiClient from './_api-client'
-import MockStorage from './_storage'
 
 import Core, { State } from '../src/core'
 
@@ -21,13 +20,9 @@ describe('Lock / Unlock', () => {
   const secretKey = Core.randomSecretKey()
   const masterPassword = Core.randomMasterPassword()
 
-  before(() => {
-    core = Object.assign(new Core(), {
-      apiClient: new MockApiClient(),
-      storage: new MockStorage(),
-    })
-
-    state = core.init()
+  before(async () => {
+    core = Object.assign(new Core({ storage: new FannyPackMemory() }), { apiClient: new MockApiClient() })
+    state = await core.init()
   })
 
   before('signup', async function () {
@@ -36,7 +31,7 @@ describe('Lock / Unlock', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword })
     state = await core.createAccount(state, acc1Id, acc1Data)
     state = await core.createAccount(state, acc2Id, acc2Data)
   })
@@ -55,12 +50,21 @@ describe('Lock / Unlock', () => {
     assert.strictEqual(state.kind, 'locked')
     assert.strictEqual((state as any).decryptedEntries, undefined)
 
+    await assertRejects(core.unlock(state, { masterPassword: 'x' }), (err) => err.code === 'WRONG_MASTER_PASSWORD')
+
     state = await core.unlock(state, { masterPassword })
+
+    if (state.kind !== 'unlocked') throw new Error('Expected a unlocked state')
+
+    assert.strictEqual(state.decryptedEntries.length, 2)
+    assert.deepStrictEqual(core.getParsedEntries(state), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data }, inbox: {} })
+
+    state = await core.connect(state)
 
     if (state.kind !== 'connected') throw new Error('Expected a connected state')
 
-    assert.strictEqual(state.decryptedEntries.length, 0)
-    assert.deepStrictEqual(core.getParsedEntries(state), { accounts: {}, inbox: {} })
+    assert.strictEqual(state.decryptedEntries.length, 2)
+    assert.deepStrictEqual(core.getParsedEntries(state), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data }, inbox: {} })
 
     state = await core.sync(state)
 

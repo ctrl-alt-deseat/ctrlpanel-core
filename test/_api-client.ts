@@ -15,7 +15,7 @@ class MockApiClient implements ApiClient {
   private changelogEntries: { [userId: string]: ChangelogEntryOutput[] } = {}
 
   async getSubscriptionPlans (): Promise<SubscriptionPlan[]> {
-    return [{ id: 'test', amount: 299, currency: 'USD', interval: 'month', intervalCount: 1, name: 'Test Plan', stripeKey: 'x', trialPeriodDays: null }]
+    return [{ id: 'test', amount: 299, currency: 'USD', interval: 'month', intervalCount: 1, stripeKey: 'x', trialPeriodDays: null }]
   }
 
   async signup (data: SignupInput) {

@@ -47,7 +47,7 @@ async function deriveCombinedKey ({ password, salt, handle, secretKey }: KeyDeri
 export type DataEncryptionKey = CryptoKey
 
 async function deriveDataEncryptionKey (input: KeyDerivationInput): Promise<DataEncryptionKey> {
-  return crypto.subtle.importKey('raw', await deriveCombinedKey(input), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+  return crypto.subtle.importKey('raw', await deriveCombinedKey(input), 'AES-GCM', false, ['encrypt', 'decrypt'])
 }
 
 async function deriveSrpPrivateKey (input: KeyDerivationInput) {

@@ -1,9 +1,8 @@
-import _ = require('./_shims')
-
 import assert = require('assert')
+import assertRejects = require('assert-rejects')
+import FannyPackMemory = require('@fanny-pack/memory')
 
 import MockApiClient from './_api-client'
-import MockStorage from './_storage'
 
 import Core, { State } from '../src/core'
 
@@ -15,12 +14,11 @@ const acc2Data = { hostname: 'google.com', handle: 'LinusU', password: 'LGp-HeA-
 
 const acc3Id = 'd68fb9fd-16b8-49c4-ba39-14fd66494f8d'
 const acc3Data = { hostname: 'github.com', handle: 'linus@folkdatorn.se', password: 'HAP-6LJ-Qzo-WPF' }
-
-const inbox1Id = '280ab0ae-195b-4eb1-974b-7ebeeb1cab1d'
-const inbox1Data = { hostname: 'github.com', email: 'linus@folkdatorn.se' }
+const acc3Update = { hostname: 'github.com', handle: 'linus@folkdatorn.se', password: 'tSv-N8f-KV8-PMh' }
 
 describe('Sync', () => {
-  let core: Core
+  let coreA: Core
+  let coreB: Core
   let stateA: State
   let stateB: State
 
@@ -28,13 +26,13 @@ describe('Sync', () => {
   const secretKey = Core.randomSecretKey()
   const masterPassword = Core.randomMasterPassword()
 
-  before(() => {
-    core = Object.assign(new Core(), {
-      apiClient: new MockApiClient(),
-      storage: new MockStorage(),
-    })
+  before(async () => {
+    const apiClient = new MockApiClient()
 
-    stateA = core.init()
+    coreA = Object.assign(new Core({ storage: new FannyPackMemory() }), { apiClient })
+    coreB = Object.assign(new Core({ storage: new FannyPackMemory() }), { apiClient })
+
+    stateA = await coreA.init()
   })
 
   before('signup', async function () {
@@ -43,7 +41,7 @@ describe('Sync', () => {
 
     if (stateA.kind !== 'empty') throw new Error('Expected an empty state')
 
-    stateA = await core.signup(stateA, { handle, secretKey, masterPassword }, false)
+    stateA = await coreA.signup(stateA, { handle, secretKey, masterPassword })
   })
 
   before('create first account', async function () {
@@ -51,52 +49,49 @@ describe('Sync', () => {
 
     assert.strictEqual(stateA.decryptedEntries.length, 0)
 
-    stateA = await core.createAccount(stateA, acc1Id, acc1Data)
+    stateA = await coreA.createAccount(stateA, acc1Id, acc1Data)
 
     assert.strictEqual(stateA.decryptedEntries.length, 1)
-    assert.deepStrictEqual(core.getParsedEntries(stateA), { accounts: { [acc1Id]: acc1Data }, inbox: {} })
-  })
-
-  after('clear stored data', async function () {
-    await core.clearStoredData(stateB)
+    assert.deepStrictEqual(coreA.getParsedEntries(stateA), { accounts: { [acc1Id]: acc1Data }, inbox: {} })
   })
 
   it('syncs changelog entries between clients', async function () {
     if (stateA.kind !== 'connected') throw new Error('Expected a connected state')
 
-    const syncToken = core.getSyncToken(stateA)
+    const syncToken = coreA.getSyncToken(stateA)
 
     // Initialise second client
-    stateB = core.init(syncToken)
+    stateB = await coreB.init(syncToken)
     if (stateB.kind !== 'locked') throw new Error('Expected a locked state')
 
     // Unlock second client
-    stateB = await core.unlock(stateB, { masterPassword })
+    stateB = await coreB.unlock(stateB, { masterPassword })
     if (stateB.kind !== 'connected') throw new Error('Expected a connected state')
 
     // Perform sync
-    stateB = await core.sync(stateB)
+    stateB = await coreB.sync(stateB)
 
     assert.strictEqual(stateB.decryptedEntries.length, 1)
-    assert.deepStrictEqual(core.getParsedEntries(stateB), { accounts: { [acc1Id]: acc1Data }, inbox: {} })
+    assert.deepStrictEqual(coreB.getParsedEntries(stateB), { accounts: { [acc1Id]: acc1Data }, inbox: {} })
 
-    stateA = await core.createAccount(stateA, acc2Id, acc2Data)
-    stateB = await core.createAccount(stateB, acc3Id, acc3Data)
+    stateA = await coreA.createAccount(stateA, acc2Id, acc2Data)
+    stateB = await coreB.createAccount(stateB, acc3Id, acc3Data)
+    stateB = await coreB.updateAccount(stateB, acc3Id, acc3Update)
 
     // Perform sync
-    stateA = await core.sync(stateA)
-    stateB = await core.sync(stateB)
+    stateA = await coreA.sync(stateA)
+    stateB = await coreB.sync(stateB)
 
-    assert.strictEqual(stateA.decryptedEntries.length, 3)
-    assert.deepStrictEqual(core.getParsedEntries(stateA), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data, [acc3Id]: acc3Data }, inbox: {} })
+    assert.strictEqual(stateA.decryptedEntries.length, 4)
+    assert.deepStrictEqual(coreA.getParsedEntries(stateA), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data, [acc3Id]: acc3Update }, inbox: {} })
 
-    assert.strictEqual(stateB.decryptedEntries.length, 3)
-    assert.deepStrictEqual(core.getParsedEntries(stateB), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data, [acc3Id]: acc3Data }, inbox: {} })
+    assert.strictEqual(stateB.decryptedEntries.length, 4)
+    assert.deepStrictEqual(coreB.getParsedEntries(stateB), { accounts: { [acc1Id]: acc1Data, [acc2Id]: acc2Data, [acc3Id]: acc3Update }, inbox: {} })
   })
 
   it('throws when sync would override stored credentials', async function () {
-    assert.throws(
-      () => core.init('05DK3C95SQM2TZAD8AP0NXPB5CT5GZSPC8438YSYBGRD0CBRF8BC'),
+    assertRejects(
+      coreA.init('05DK3C95SQM2TZAD8AP0NXPB5CT5GZSPC8438YSYBGRD0CBRF8BC'),
       (err) => err.code === 'CONFLICTING_CREDENTIALS'
     )
   })

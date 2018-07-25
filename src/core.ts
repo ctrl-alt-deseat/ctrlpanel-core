@@ -1,13 +1,13 @@
-import arrayBufferToHex = require('array-buffer-to-hex')
+import { applyPatch, Operation } from 'fast-json-patch'
+import { FannyPack } from '@fanny-pack/core'
 import hexToArrayBuffer = require('hex-to-array-buffer')
 import srp = require('secure-remote-password/client')
-import { applyPatch, Operation } from 'fast-json-patch'
 import uuid = require('uuid')
 
 import ApiClient, { FinalizeLoginResponse, LoginSession, PaymentInformation, SubscriptionPlan, SubscriptionStatus, DeseatmeExport } from './api-client'
 import CtrlpanelCrypto, { DecryptedEntry } from './crypto'
 import HumanFormat from './human-format'
-import LocalStorage, { Credentials } from './local-storage'
+import LocalStorage from './local-storage'
 
 import randomAccountPassword from './random-account-password'
 import randomHandle from './random-handle'
@@ -48,6 +48,13 @@ export interface ParsedEntries {
   inbox: { [key: string]: InboxEntry }
 }
 
+export interface Options {
+  apiHost?: string
+  deseatmeApiHost?: string
+  storage: FannyPack
+  syncCredentialsToLocalStorage?: boolean
+}
+
 export interface EmptyState {
   kind: 'empty'
 }
@@ -56,7 +63,6 @@ export interface LockedState {
   kind: 'locked'
 
   handle: string
-  saveDevice: boolean
   secretKey: string
 }
 
@@ -66,7 +72,6 @@ export interface UnlockedState {
   dataEncryptionKey: CryptoKey
   decryptedEntries: DecryptedEntry[]
   handle: string
-  saveDevice: boolean
   secretKey: string
   srpPrivateKey: string
 }
@@ -78,7 +83,6 @@ export interface ConnectedState {
   dataEncryptionKey: CryptoKey
   decryptedEntries: DecryptedEntry[]
   handle: string
-  saveDevice: boolean
   secretKey: string
   srpPrivateKey: string
   hasPaymentInformation: boolean
@@ -104,14 +108,18 @@ export default class CtrlpanelCore {
   private apiClient: ApiClient
   private storage: LocalStorage
 
-  constructor (apiHost: string = 'https://api.ctrlpanel.io', deseatmeApiHost: string = 'https://api.deseat.me') {
+  constructor (options: Options) {
+    const apiHost = options.apiHost ||'https://api.ctrlpanel.io'
+    const deseatmeApiHost = options.deseatmeApiHost || 'https://api.deseat.me'
+    const syncCredentialsToLocalStorage = options.syncCredentialsToLocalStorage || false
+
     this.apiClient = new ApiClient(apiHost, deseatmeApiHost)
-    this.storage = new LocalStorage()
+    this.storage = new LocalStorage(options.storage, syncCredentialsToLocalStorage)
   }
 
   /** Construct the initial state */
-  init (syncToken?: string): EmptyState | LockedState {
-    const storedCredentials = this.storage.readCredentials()
+  async init (syncToken?: string): Promise<EmptyState | LockedState> {
+    const storedCredentials = await this.storage.readCredentials()
     const syncCredentials = syncToken && parseSyncToken(syncToken)
 
     if (storedCredentials && syncCredentials) {
@@ -119,10 +127,10 @@ export default class CtrlpanelCore {
     }
 
     if (syncCredentials) {
-      this.storage.writeCredentials(syncCredentials)
-      return { kind: 'locked', saveDevice: true, ...syncCredentials }
+      await this.storage.writeCredentials(syncCredentials)
+      return { kind: 'locked', ...syncCredentials }
     } else if (storedCredentials) {
-      return { kind: 'locked', saveDevice: true, ...storedCredentials }
+      return { kind: 'locked', ...storedCredentials }
     } else {
       return { kind: 'empty' }
     }
@@ -144,13 +152,13 @@ export default class CtrlpanelCore {
 
   /** Transition to the locked state */
   lock (state: UnlockedState | ConnectedState): LockedState {
-    const { handle, saveDevice, secretKey } = state
+    const { handle, secretKey } = state
 
-    return { kind: 'locked', handle, saveDevice, secretKey }
+    return { kind: 'locked', handle, secretKey }
   }
 
   /** Signup a new user with the api, then return a connected state */
-  async signup (state: EmptyState, info: { email?: string, handle: string, secretKey: string, masterPassword: string }, saveDevice: boolean = true): Promise<ConnectedState> {
+  async signup (state: EmptyState, info: { email?: string, handle: string, secretKey: string, masterPassword: string }): Promise<ConnectedState> {
     // Generate salts
     const dekSalt = srp.generateSalt()
     const srpSalt = srp.generateSalt()
@@ -172,14 +180,12 @@ export default class CtrlpanelCore {
     // Derive data encryption key (DEK)
     const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: rawDekSalt, handle: rawHandle, secretKey: rawSecretKey })
 
-    if (saveDevice) {
-      // Store handle and secret key for automatic login
-      this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
+    // Store handle and secret key for automatic login
+    await this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
 
-      // Store Fast Track information for login without online server
-      const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(dataEncryptionKey, srpPrivateKey)
-      this.storage.writeFastTrack({ dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
-    }
+    // Store Fast Track information for login without online server
+    const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(dataEncryptionKey, srpPrivateKey)
+    await this.storage.writeFastTrack({ dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
 
     return {
       kind: 'connected',
@@ -188,7 +194,6 @@ export default class CtrlpanelCore {
       dataEncryptionKey: dataEncryptionKey,
       decryptedEntries: [],
       handle: info.handle,
-      saveDevice: saveDevice,
       secretKey: info.secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: false,
@@ -198,7 +203,7 @@ export default class CtrlpanelCore {
   }
 
   /** Login as an existing user with the api, then return a connected state */
-  async login (state: EmptyState, info: { handle: string, secretKey: string, masterPassword: string }, saveDevice: boolean): Promise<ConnectedState> {
+  async login (state: EmptyState, info: { handle: string, secretKey: string, masterPassword: string }): Promise<ConnectedState> {
     // Generate ephemeral pair
     const ephemeral = srp.generateEphemeral()
 
@@ -230,14 +235,12 @@ export default class CtrlpanelCore {
 
     const dataEncryptionKeyPromise = CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: hexToArrayBuffer(loginResult.dekSalt), handle: rawHandle, secretKey: rawSecretKey })
 
-    if (saveDevice) {
-      // Store handle and secret key for automatic login
-      this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
+    // Store handle and secret key for automatic login
+    await this.storage.writeCredentials({ handle: info.handle, secretKey: info.secretKey })
 
-      // Store Fast Track information for login without online server
-      const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(await dataEncryptionKeyPromise, srpPrivateKey)
-      this.storage.writeFastTrack({ dekSalt: loginResult.dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
-    }
+    // Store Fast Track information for login without online server
+    const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(await dataEncryptionKeyPromise, srpPrivateKey)
+    await this.storage.writeFastTrack({ dekSalt: loginResult.dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
 
     return {
       kind: 'connected',
@@ -246,7 +249,6 @@ export default class CtrlpanelCore {
       dataEncryptionKey: await dataEncryptionKeyPromise,
       decryptedEntries: [],
       handle: info.handle,
-      saveDevice: saveDevice,
       secretKey: info.secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: loginResult.hasPaymentInformation,
@@ -264,7 +266,7 @@ export default class CtrlpanelCore {
    */
   async unlock (state: LockedState, info: { masterPassword: string }): Promise<UnlockedState | ConnectedState> {
     // Read credentials
-    const { handle, saveDevice, secretKey } = state
+    const { handle, secretKey } = state
 
     // Raw values
     const rawHandle = HumanFormat.parse(handle)
@@ -274,7 +276,7 @@ export default class CtrlpanelCore {
     const cleanPassword = removeWhitespace(info.masterPassword)
 
     // Read possibly stored fast track data
-    const fastTrack = this.storage.readFastTrack()
+    const fastTrack = await this.storage.readFastTrack()
 
     if (fastTrack) {
       const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: hexToArrayBuffer(fastTrack.dekSalt), handle: rawHandle, secretKey: rawSecretKey })
@@ -295,7 +297,6 @@ export default class CtrlpanelCore {
         dataEncryptionKey: dataEncryptionKey,
         decryptedEntries: decryptedEntries,
         handle: handle,
-        saveDevice: saveDevice,
         secretKey: secretKey,
         srpPrivateKey: srpPrivateKey,
       }
@@ -320,15 +321,13 @@ export default class CtrlpanelCore {
 
     let decryptedEntries: DecryptedEntry[] = []
 
-    if (saveDevice) {
-      /* Upgrade old users to Fast Track */
-      const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(dataEncryptionKey, srpPrivateKey)
-      this.storage.writeFastTrack({ dekSalt: loginResult.dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
+    /* Upgrade old users to Fast Track */
+    const encryptedSrpPrivateKey = await CtrlpanelCrypto.encryptSrpPrivateKey(dataEncryptionKey, srpPrivateKey)
+    await this.storage.writeFastTrack({ dekSalt: loginResult.dekSalt, srpPrivateKey: encryptedSrpPrivateKey })
 
-      /* Read cached changelog entries */
-      const encryptedEntries = await this.storage.getAllChangelogEntries()
-      decryptedEntries = await CtrlpanelCrypto.decryptEntries(dataEncryptionKey, encryptedEntries)
-    }
+    /* Read cached changelog entries */
+    const encryptedEntries = await this.storage.getAllChangelogEntries()
+    decryptedEntries = await CtrlpanelCrypto.decryptEntries(dataEncryptionKey, encryptedEntries)
 
     return {
       kind: 'connected',
@@ -337,7 +336,6 @@ export default class CtrlpanelCore {
       dataEncryptionKey: dataEncryptionKey,
       decryptedEntries: decryptedEntries,
       handle: handle,
-      saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: loginResult.hasPaymentInformation,
@@ -348,7 +346,7 @@ export default class CtrlpanelCore {
 
   /** Aquire an access token from the api, then return a connected state */
   async connect (state: UnlockedState): Promise<ConnectedState> {
-    const { dataEncryptionKey, decryptedEntries, handle, saveDevice, secretKey, srpPrivateKey } = state
+    const { dataEncryptionKey, decryptedEntries, handle, secretKey, srpPrivateKey } = state
 
     const ephemeral = srp.generateEphemeral()
     const loginSession = await this.apiClient.initiateLogin(handle)
@@ -365,7 +363,6 @@ export default class CtrlpanelCore {
       dataEncryptionKey: dataEncryptionKey,
       decryptedEntries: decryptedEntries,
       handle: handle,
-      saveDevice: saveDevice,
       secretKey: secretKey,
       srpPrivateKey: srpPrivateKey,
       hasPaymentInformation: loginResult.hasPaymentInformation,
@@ -380,13 +377,11 @@ export default class CtrlpanelCore {
    * Returns a new connected state with updated `decryptedEntries`.
    */
   async sync (state: ConnectedState): Promise<ConnectedState> {
-    const { authToken, dataEncryptionKey, saveDevice } = state
+    const { authToken, dataEncryptionKey } = state
 
     const encryptedEntries = await this.apiClient.getChangelogEntries(state.authToken)
 
-    if (saveDevice) {
-      await this.storage.putChangelogEntries(encryptedEntries)
-    }
+    await this.storage.putChangelogEntries(encryptedEntries)
 
     const decryptedEntries = await CtrlpanelCrypto.decryptEntries(dataEncryptionKey, encryptedEntries)
 
@@ -472,14 +467,12 @@ export default class CtrlpanelCore {
    * Returns a new connected state with updated `decryptedEntries`.
    */
   private async submitPatch (state: ConnectedState, patch: Operation): Promise<ConnectedState> {
-    const { authToken, dataEncryptionKey, decryptedEntries, saveDevice } = state
+    const { authToken, dataEncryptionKey, decryptedEntries } = state
 
     const payload = await CtrlpanelCrypto.encryptPatch(patch, dataEncryptionKey)
     const changelogEntry = await this.apiClient.postChangelogEntry(authToken, payload)
 
-    if (saveDevice) {
-      await this.storage.putChangelogEntries([changelogEntry])
-    }
+    await this.storage.putChangelogEntries([changelogEntry])
 
     return Object.assign({}, state, { decryptedEntries: [...decryptedEntries, { patch, ...payload }] })
   }

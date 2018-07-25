@@ -3,6 +3,7 @@ import base32Decode = require('base32-decode')
 import base32Encode = require('base32-encode')
 
 function dashify (input: string) {
+  /* istanbul ignore if */
   if (input.length !== 26) {
     throw new Error('Expected 26 chars of data')
   }
@@ -19,6 +20,7 @@ function dashify (input: string) {
 }
 
 function stringify (input: ArrayBuffer) {
+  /* istanbul ignore if */
   if (input.byteLength !== 16) {
     throw new Error('Expected 16 bytes of data')
   }

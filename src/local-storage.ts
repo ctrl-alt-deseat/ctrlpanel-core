@@ -1,13 +1,8 @@
-import base32Decode = require('base32-decode')
-import base32Encode = require('base32-encode')
-import idb, { DB } from 'idb'
+import { FannyPack } from '@fanny-pack/core'
 
 import { ChangelogEntryOutput } from './api-client'
 import { EncryptedData } from './crypto'
 import HumanFormat from './human-format'
-
-const DB_NAME = 'vault'
-let DB_HANDLE: Promise<DB>
 
 export interface Credentials {
   handle: string
@@ -30,72 +25,83 @@ function parseCredentials (input: string): Credentials {
   return { handle, secretKey }
 }
 
-function getHandle () {
-  if (!DB_HANDLE) {
-    DB_HANDLE = idb.open(DB_NAME, 1, (db) => {
-      const store = db.createObjectStore('changelogEntry', { autoIncrement: false, keyPath: 'id' })
-
-      store.createIndex('createdAt', 'createdAt')
-    })
-  }
-
-  return DB_HANDLE
+function changelogKey (changelogEntry: ChangelogEntryOutput) {
+  return `changelog/${changelogEntry.createdAt}/${changelogEntry.id}`
 }
 
+const kFannyPack = Symbol('fanny-pack')
+const kSyncCredentialsToLocalStorage = Symbol('sync-credentials-to-local-storage')
+
 export default class LocalStorage {
-  async clear () {
-    window.localStorage.removeItem('credentials')
-    window.localStorage.removeItem('fast-track')
+  [kFannyPack]: FannyPack
+  [kSyncCredentialsToLocalStorage]: boolean
 
-    const db = await getHandle()
-    const tx = db.transaction('changelogEntry', 'readwrite')
-    const store = tx.objectStore('changelogEntry')
-
-    await store.clear()
-
-    await tx.complete
+  constructor (fannyPack: FannyPack, syncCredentialsToLocalStorage: boolean) {
+    this[kFannyPack] = fannyPack
+    this[kSyncCredentialsToLocalStorage] = syncCredentialsToLocalStorage
   }
 
-  async putChangelogEntries (changelogEntries: ChangelogEntryOutput[]) {
-    const db = await getHandle()
-    const tx = db.transaction('changelogEntry', 'readwrite')
-    const store = tx.objectStore('changelogEntry')
+  async clear (): Promise<void> {
+    /* First remove cached changelog entries */
+    const range = { gte: 'changelog/', lt: 'changelog0' }
 
-    await Promise.all(changelogEntries.map(entry => store.put(entry)))
+    for await (const key of this[kFannyPack].keys(range)) {
+      await this[kFannyPack].delete(key)
+    }
 
-    await tx.complete
+    /* Then cached fast track data */
+    await this[kFannyPack].delete('fast-track')
+
+    /* Finally remove the login credentials */
+    await this[kFannyPack].delete('credentials')
+
+    if (this[kSyncCredentialsToLocalStorage]) {
+      window.localStorage.removeItem('credentials')
+    }
   }
 
-  async getAllChangelogEntries () {
-    const db = await getHandle()
-    const tx = db.transaction('changelogEntry', 'readonly')
-    const store = tx.objectStore('changelogEntry')
-    const index = store.index('createdAt')
-
-    const encryptedEntries = await index.getAll()
-
-    await tx.complete
-
-    return encryptedEntries as ChangelogEntryOutput[]
+  async putChangelogEntries (changelogEntries: ChangelogEntryOutput[]): Promise<void> {
+    await Promise.all(changelogEntries.map((changelogEntry) => {
+      return this[kFannyPack].set(changelogKey(changelogEntry), changelogEntry)
+    }))
   }
 
-  readCredentials (): Credentials | null {
-    const input = window.localStorage.getItem('credentials')
+  async getAllChangelogEntries (): Promise<ChangelogEntryOutput[]> {
+    const result: ChangelogEntryOutput[] = []
+    const range = { gte: 'changelog/', lt: 'changelog0' }
 
-    return (input ? parseCredentials(input) : null)
+    for await (const entry of this[kFannyPack].values(range)) {
+      result.push(entry as ChangelogEntryOutput)
+    }
+
+    return result
   }
 
-  writeCredentials (credentials: Credentials) {
-    window.localStorage.setItem('credentials', stringifyCredentials(credentials))
+  async readCredentials (): Promise<Credentials | null> {
+    const firstSource = await this[kFannyPack].get('credentials') as Credentials | undefined
+    if (firstSource) return firstSource
+
+    if (this[kSyncCredentialsToLocalStorage]) {
+      const secondSource = window.localStorage.getItem('credentials')
+      if (secondSource) return parseCredentials(secondSource)
+    }
+
+    return null
   }
 
-  readFastTrack (): FastTrack | null {
-    const input = window.localStorage.getItem('fast-track')
+  async writeCredentials (data: Credentials): Promise<void> {
+    await this[kFannyPack].set('credentials', data)
 
-    return (input ? JSON.parse(input) : null)
+    if (this[kSyncCredentialsToLocalStorage]) {
+      window.localStorage.setItem('credentials', stringifyCredentials(data))
+    }
   }
 
-  writeFastTrack (data: FastTrack) {
-    window.localStorage.setItem('fast-track', JSON.stringify(data))
+  async readFastTrack (): Promise<FastTrack | null> {
+    return (await this[kFannyPack].get('fast-track') as FastTrack | undefined) || null
+  }
+
+  async writeFastTrack (data: FastTrack): Promise<void> {
+    await this[kFannyPack].set('fast-track', data)
   }
 }

@@ -1,9 +1,7 @@
-import _ = require('./_shims')
-
 import assert = require('assert')
+import FannyPackMemory = require('@fanny-pack/memory')
 
 import MockApiClient from './_api-client'
-import MockStorage from './_storage'
 
 import Core, { State } from '../src/core'
 
@@ -21,13 +19,9 @@ describe('Import', () => {
   const secretKey = Core.randomSecretKey()
   const masterPassword = Core.randomMasterPassword()
 
-  before(() => {
-    core = Object.assign(new Core(), {
-      apiClient: new MockApiClient(),
-      storage: new MockStorage(),
-    })
-
-    state = core.init()
+  before(async () => {
+    core = Object.assign(new Core({ storage: new FannyPackMemory() }), { apiClient: new MockApiClient() })
+    state = await core.init()
   })
 
   before('signup', async function () {
@@ -36,7 +30,7 @@ describe('Import', () => {
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
 
-    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword })
   })
 
   it('imports accounts from deseat.me', async function () {

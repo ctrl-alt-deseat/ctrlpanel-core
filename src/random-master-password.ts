@@ -3,6 +3,7 @@
 import wordList = require('./wordlist')
 
 export default function randomMasterPassword () {
+  /* istanbul ignore if */
   if (wordList.length !== 8192) {
     throw new Error('Expected word list to contain 8192 entries')
   }
@@ -26,5 +27,6 @@ export default function randomMasterPassword () {
     case 4: return [word1, word2, word3, word4, digit].join(' ')
   }
 
+  /* istanbul ignore next */
   throw new Error('Unreachable code')
 }

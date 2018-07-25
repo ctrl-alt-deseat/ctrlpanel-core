@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "prepare": "tsc",
-    "test": "nyc --extension .ts --require ts-node/register _mocha './test/**/*.ts'",
+    "test": "nyc --extension .ts _mocha './test/**/*.ts'",
     "posttest": "nyc report --reporter=html"
   },
   "dependencies": {
@@ -30,6 +30,8 @@
     "uuid": "^3.2.1"
   },
   "devDependencies": {
+    "@fanny-pack/core": "^1.0.0-beta.1",
+    "@fanny-pack/memory": "^1.0.0-beta.1",
     "@trust/webcrypto": "LinusU/webcrypto#172b474",
     "@types/mocha": "^2.2.44",
     "@types/node": "^8.5.1",
@@ -38,6 +40,9 @@
     "mocha": "^4.0.1",
     "nyc": "^11.3.0",
     "ts-node": "^4.0.2",
-    "typescript": "^2.6.2"
+    "typescript": "^2.9.2"
+  },
+  "peerDependencies": {
+    "@fanny-pack/core": "^1.0.0-beta.1"
   }
 }

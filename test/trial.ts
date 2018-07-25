@@ -1,9 +1,7 @@
-import _ = require('./_shims')
-
 import assert = require('assert')
+import FannyPackMemory = require('@fanny-pack/memory')
 
 import MockApiClient from './_api-client'
-import MockStorage from './_storage'
 
 import Core, { State } from '../src/core'
 
@@ -11,13 +9,9 @@ describe('Trial', () => {
   let core: Core
   let state: State
 
-  before(() => {
-    core = Object.assign(new Core(), {
-      apiClient: new MockApiClient(),
-      storage: new MockStorage(),
-    })
-
-    state = core.init()
+  before(async () => {
+    core = Object.assign(new Core({ storage: new FannyPackMemory() }), { apiClient: new MockApiClient() })
+    state = await core.init()
   })
 
   it('lists subscription plans', async function () {
@@ -29,7 +23,6 @@ describe('Trial', () => {
       assert.strictEqual(typeof plan.currency, 'string')
       assert.strictEqual(typeof plan.interval, 'string')
       assert.strictEqual(typeof plan.intervalCount, 'number')
-      assert.strictEqual(typeof plan.name, 'string')
       assert.strictEqual(typeof plan.stripeKey, 'string')
       assert.strictEqual(plan.trialPeriodDays, null)
     }
@@ -45,7 +38,7 @@ describe('Trial', () => {
     const secretKey = Core.randomSecretKey()
     const masterPassword = Core.randomMasterPassword()
 
-    state = await core.signup(state, { handle, secretKey, masterPassword }, false)
+    state = await core.signup(state, { handle, secretKey, masterPassword })
 
     assert.strictEqual(state.kind, 'connected')
     assert.strictEqual(state.subscriptionStatus, 'trialing')
