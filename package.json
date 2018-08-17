@@ -16,6 +16,7 @@
   "dependencies": {
     "@ctrlpanel/hkdf": "^1.0.0",
     "@ctrlpanel/pbkdf2": "^1.0.0",
+    "@ctrlpanel/random-account-password": "^1.0.0",
     "array-buffer-to-hex": "^1.0.0",
     "base32-decode": "^1.0.0",
     "base32-encode": "^1.0.0",

@@ -1,6 +1,7 @@
 import { applyPatch, Operation } from 'fast-json-patch'
 import { FannyPack } from '@fanny-pack/core'
 import hexToArrayBuffer = require('hex-to-array-buffer')
+import randomAccountPassword = require('@ctrlpanel/random-account-password')
 import srp = require('secure-remote-password/client')
 import uuid = require('uuid')
 
@@ -9,7 +10,6 @@ import CtrlpanelCrypto, { DecryptedEntry } from './crypto'
 import HumanFormat from './human-format'
 import LocalStorage from './local-storage'
 
-import randomAccountPassword from './random-account-password'
 import randomHandle from './random-handle'
 import randomMasterPassword from './random-master-password'
 import randomSecretKey from './random-secret-key'
