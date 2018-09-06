@@ -56,7 +56,7 @@ export default class LocalStorage {
     await this[kFannyPack].delete('credentials')
 
     if (this[kSyncCredentialsToLocalStorage]) {
-      window.localStorage.removeItem('credentials')
+      localStorage.removeItem('credentials')
     }
   }
 
@@ -82,7 +82,7 @@ export default class LocalStorage {
     if (firstSource) return firstSource
 
     if (this[kSyncCredentialsToLocalStorage]) {
-      const secondSource = window.localStorage.getItem('credentials')
+      const secondSource = localStorage.getItem('credentials')
       if (secondSource) return parseCredentials(secondSource)
     }
 
@@ -93,7 +93,7 @@ export default class LocalStorage {
     await this[kFannyPack].set('credentials', data)
 
     if (this[kSyncCredentialsToLocalStorage]) {
-      window.localStorage.setItem('credentials', stringifyCredentials(data))
+      localStorage.setItem('credentials', stringifyCredentials(data))
     }
   }
 

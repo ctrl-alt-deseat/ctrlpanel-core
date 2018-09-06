@@ -17,8 +17,6 @@ const PBKDF2_KEYLEN = 32
 const HKDF_HASH = 'SHA-512'
 const HKDF_KEYLEN = 32
 
-const { crypto } = window
-
 function generateAesGcmNonce () {
   // Q: Why 12 bytes?
   // A: https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes

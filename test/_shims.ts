@@ -9,9 +9,4 @@ const mockLocalStorage = {
 Object.assign(global, {
   crypto: require('@trust/webcrypto'),
   localStorage: mockLocalStorage,
-
-  window: {
-    crypto: require('@trust/webcrypto'),
-    localStorage: mockLocalStorage,
-  }
 })

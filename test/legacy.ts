@@ -14,7 +14,7 @@ describe('Legacy', () => {
   const masterPassword = Core.randomMasterPassword()
 
   afterEach(() => {
-    window.localStorage.removeItem('credentials')
+    localStorage.removeItem('credentials')
   })
 
   it('syncs credentials with localStorage', async function () {
@@ -24,24 +24,24 @@ describe('Legacy', () => {
     const core = Object.assign(new Core({ storage: new FannyPackMemory(), syncCredentialsToLocalStorage: true }), { apiClient })
     let state: State = await core.init()
 
-    assert.strictEqual(window.localStorage.getItem('credentials'), undefined)
+    assert.strictEqual(localStorage.getItem('credentials'), undefined)
 
     if (state.kind !== 'empty') throw new Error('Expected an empty state')
     state = await core.signup(state, { handle, secretKey, masterPassword })
 
-    assert.strictEqual(window.localStorage.getItem('credentials'), `${handle}${secretKey}`.replace(/-/g, ''))
+    assert.strictEqual(localStorage.getItem('credentials'), `${handle}${secretKey}`.replace(/-/g, ''))
 
     if (state.kind !== 'connected') throw new Error('Expected a connected state')
     state = await core.clearStoredData(state)
 
-    assert.strictEqual(window.localStorage.getItem('credentials'), undefined)
+    assert.strictEqual(localStorage.getItem('credentials'), undefined)
   })
 
   it('reads credentials from localStorage', async function () {
     this.timeout(10000)
     this.slow(1300)
 
-    window.localStorage.setItem('credentials', `${handle}${secretKey}`.replace(/-/g, ''))
+    localStorage.setItem('credentials', `${handle}${secretKey}`.replace(/-/g, ''))
 
     const core = Object.assign(new Core({ storage: new FannyPackMemory(), syncCredentialsToLocalStorage: true }), { apiClient })
     let state: State = await core.init()
