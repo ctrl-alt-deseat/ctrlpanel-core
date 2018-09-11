@@ -158,7 +158,7 @@ export default class CtrlpanelCore {
   }
 
   /** Signup a new user with the api, then return a connected state */
-  async signup (state: EmptyState, info: { email?: string, handle: string, secretKey: string, masterPassword: string }): Promise<ConnectedState> {
+  async signup (state: EmptyState, info: { email?: string, handle: string, secretKey: string, masterPassword: string, paymentInformation?: PaymentInformation }): Promise<ConnectedState> {
     // Generate salts
     const dekSalt = srp.generateSalt()
     const srpSalt = srp.generateSalt()
@@ -175,7 +175,7 @@ export default class CtrlpanelCore {
     // Create user at the remote server
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: rawSrpSalt, handle: rawHandle, secretKey: rawSecretKey })
     const srpVerifier = srp.deriveVerifier(srpPrivateKey)
-    const { token } = await this.apiClient.signup({ email: info.email, handle: info.handle, dekSalt, srpSalt, srpVerifier })
+    const { token } = await this.apiClient.signup({ email: info.email, handle: info.handle, dekSalt, srpSalt, srpVerifier, paymentInformation: info.paymentInformation })
 
     // Derive data encryption key (DEK)
     const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: rawDekSalt, handle: rawHandle, secretKey: rawSecretKey })

@@ -21,6 +21,7 @@ export interface SignupInput {
   dekSalt: string
   srpSalt: string
   srpVerifier: string
+  paymentInformation?: PaymentInformation
 }
 
 export interface SignupResponse {
@@ -116,9 +117,9 @@ class ApiClient {
     return request<SubscriptionPlan[]>(`${this.apiHost}/v1/subscription-plans?trial=${withTrial}`, { headers })
   }
 
-  async signup ({ email, handle, dekSalt, srpSalt, srpVerifier }: SignupInput) {
+  async signup ({ email, handle, dekSalt, srpSalt, srpVerifier, paymentInformation }: SignupInput) {
     const method = 'POST'
-    const body = JSON.stringify({ email, handle: HumanFormat.toHex(handle), dekSalt, srpSalt, srpVerifier })
+    const body = JSON.stringify({ email, handle: HumanFormat.toHex(handle), dekSalt, srpSalt, srpVerifier, paymentInformation })
     const headers = new Headers({ 'Accept': 'application/json', 'Content-Type': 'application/json' })
 
     return request<SignupResponse>(`${this.apiHost}/v1/users`, { method, body, headers })
