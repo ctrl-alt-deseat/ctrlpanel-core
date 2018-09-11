@@ -59,6 +59,11 @@ export interface ChangelogEntryOutput {
   createdAt: string
 }
 
+export interface AndroidPaymentInformation {
+  type: 'android'
+  transactionIdentifier: string
+}
+
 export interface ApplePaymentInformation {
   type: 'apple'
   transactionIdentifier: string
@@ -72,7 +77,7 @@ export interface StripePaymentInformation {
   coupon?: string | null
 }
 
-export type PaymentInformation = ApplePaymentInformation | StripePaymentInformation
+export type PaymentInformation = AndroidPaymentInformation | ApplePaymentInformation | StripePaymentInformation
 
 export interface PaymentInformationOutput {
   hasPaymentInformation: boolean
