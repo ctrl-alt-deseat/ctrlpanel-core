@@ -31,8 +31,8 @@
     "uuid": "^3.2.1"
   },
   "devDependencies": {
-    "@fanny-pack/core": "^1.0.0-beta.1",
-    "@fanny-pack/memory": "^1.0.0-beta.1",
+    "@fanny-pack/core": "^1.0.0-beta.2",
+    "@fanny-pack/memory": "^1.0.0-beta.2",
     "@trust/webcrypto": "LinusU/webcrypto#172b474",
     "@types/mocha": "^2.2.44",
     "@types/node": "^8.5.1",
@@ -44,6 +44,6 @@
     "typescript": "^2.9.2"
   },
   "peerDependencies": {
-    "@fanny-pack/core": "^1.0.0-beta.1"
+    "@fanny-pack/core": "^1.0.0-beta.1 || ^1.0.0-beta.2"
   }
 }
