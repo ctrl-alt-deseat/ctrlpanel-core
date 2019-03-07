@@ -25,7 +25,7 @@
     "fast-json-patch": "^2.0.6",
     "hex-to-array-buffer": "^1.1.0",
     "integer-array-ops": "^1.0.0",
-    "secure-remote-password": "^0.2.3",
+    "secure-remote-password": "^0.3.1",
     "uuid": "^3.2.1"
   },
   "devDependencies": {

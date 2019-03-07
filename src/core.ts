@@ -222,7 +222,7 @@ export default class CtrlpanelCore {
     const cleanPassword = removeWhitespace(info.masterPassword)
 
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: hexToArrayBuffer(loginSession.salt), handle: rawHandle, secretKey: rawSecretKey })
-    const srpSession = srp.deriveSession(ephemeral, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(info.handle), srpPrivateKey)
+    const srpSession = srp.deriveSession(ephemeral.secret, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(info.handle), srpPrivateKey)
 
     let loginResult: FinalizeLoginResponse
     try {
@@ -231,7 +231,7 @@ export default class CtrlpanelCore {
       throw Object.assign(new Error('Failed to login'), { code: 'WRONG_SECRET_KEY_OR_MASTER_PASSWORD', originalError: err })
     }
 
-    srp.verifySession(ephemeral, srpSession, loginResult.proof)
+    srp.verifySession(ephemeral.public, srpSession, loginResult.proof)
 
     const dataEncryptionKeyPromise = CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: hexToArrayBuffer(loginResult.dekSalt), handle: rawHandle, secretKey: rawSecretKey })
 
@@ -306,7 +306,7 @@ export default class CtrlpanelCore {
     const loginSession = await this.apiClient.initiateLogin(handle)
     const srpPrivateKey = await CtrlpanelCrypto.deriveSrpPrivateKey({ password: cleanPassword, salt: hexToArrayBuffer(loginSession.salt), handle: rawHandle, secretKey: rawSecretKey })
 
-    const srpSession = srp.deriveSession(ephemeral, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(handle), srpPrivateKey)
+    const srpSession = srp.deriveSession(ephemeral.secret, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(handle), srpPrivateKey)
 
     let loginResult: FinalizeLoginResponse
     try {
@@ -315,7 +315,7 @@ export default class CtrlpanelCore {
       throw Object.assign(new Error('Failed to unlock'), { code: 'WRONG_MASTER_PASSWORD', originalError: err })
     }
 
-    srp.verifySession(ephemeral, srpSession, loginResult.proof)
+    srp.verifySession(ephemeral.public, srpSession, loginResult.proof)
 
     const dataEncryptionKey = await CtrlpanelCrypto.deriveDataEncryptionKey({ password: cleanPassword, salt: hexToArrayBuffer(loginResult.dekSalt), handle: rawHandle, secretKey: rawSecretKey })
 
@@ -351,10 +351,10 @@ export default class CtrlpanelCore {
     const ephemeral = srp.generateEphemeral()
     const loginSession = await this.apiClient.initiateLogin(handle)
 
-    const srpSession = srp.deriveSession(ephemeral, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(handle), srpPrivateKey)
+    const srpSession = srp.deriveSession(ephemeral.secret, loginSession.serverPublicEphemeral, loginSession.salt, HumanFormat.toHex(handle), srpPrivateKey)
     const loginResult = await this.apiClient.finalizeLogin(loginSession.id, { clientPublicEphemeral: ephemeral.public, clientSessionProof: srpSession.proof })
 
-    srp.verifySession(ephemeral, srpSession, loginResult.proof)
+    srp.verifySession(ephemeral.public, srpSession, loginResult.proof)
 
     return {
       kind: 'connected',

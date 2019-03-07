@@ -40,7 +40,7 @@ class MockApiClient implements ApiClient {
     const { userId, serverEphemeral } = this.sessions[loginSessionId]
     const { handle, dekSalt, srpSalt, srpVerifier, hasPaymentInformation, subscriptionStatus } = this.users.find(u => u.id === userId)
 
-    const { proof } = srp.deriveSession(serverEphemeral, clientPublicEphemeral, srpSalt, HumanFormat.toHex(handle), srpVerifier, clientSessionProof)
+    const { proof } = srp.deriveSession(serverEphemeral.secret, clientPublicEphemeral, srpSalt, HumanFormat.toHex(handle), srpVerifier, clientSessionProof)
 
     return { proof, token: userId, dekSalt, hasPaymentInformation, subscriptionStatus, trialDaysLeft: (subscriptionStatus === 'active' ? 0 : 7) }
   }
