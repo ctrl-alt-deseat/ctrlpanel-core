@@ -48,7 +48,7 @@ describe('Login', () => {
 
     await assertRejects(
       core.login(state, { handle: 'x', secretKey, masterPassword }),
-      (err) => err.code === 'HANDLE_NOT_FOUND'
+      (err: any) => err.code === 'HANDLE_NOT_FOUND'
     )
   })
 
@@ -60,7 +60,7 @@ describe('Login', () => {
 
     await assertRejects(
       core.login(state, { handle, secretKey, masterPassword: 'x' }),
-      (err) => err.code === 'WRONG_SECRET_KEY_OR_MASTER_PASSWORD'
+      (err: any) => err.code === 'WRONG_SECRET_KEY_OR_MASTER_PASSWORD'
     )
   })
 })

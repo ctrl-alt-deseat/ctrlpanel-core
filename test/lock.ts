@@ -50,7 +50,7 @@ describe('Lock / Unlock', () => {
     assert.strictEqual(state.kind, 'locked')
     assert.strictEqual((state as any).decryptedEntries, undefined)
 
-    await assertRejects(core.unlock(state, { masterPassword: 'x' }), (err) => err.code === 'WRONG_MASTER_PASSWORD')
+    await assertRejects(core.unlock(state, { masterPassword: 'x' }), (err: any) => err.code === 'WRONG_MASTER_PASSWORD')
 
     state = await core.unlock(state, { masterPassword })
 

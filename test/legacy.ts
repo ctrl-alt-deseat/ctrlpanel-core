@@ -51,7 +51,7 @@ describe('Legacy', () => {
     assert.strictEqual(state.handle, handle)
     assert.strictEqual(state.secretKey, secretKey)
 
-    await assertRejects(core.unlock(state, { masterPassword: 'x' }), (err) => err.code === 'WRONG_MASTER_PASSWORD')
+    await assertRejects(core.unlock(state, { masterPassword: 'x' }), (err: any) => err.code === 'WRONG_MASTER_PASSWORD')
 
     state = await core.unlock(state, { masterPassword })
 

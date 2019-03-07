@@ -15,7 +15,7 @@ class MockApiClient implements ApiClient {
   private changelogEntries: { [userId: string]: ChangelogEntryOutput[] } = {}
 
   async getSubscriptionPlans (): Promise<SubscriptionPlan[]> {
-    return [{ id: 'test', amount: 299, currency: 'USD', interval: 'month', intervalCount: 1, stripeKey: 'x', trialPeriodDays: null }]
+    return [{ id: 'test', amount: 299, currency: 'USD', interval: 'month', intervalCount: 1, stripeKey: 'x', trialPeriodDays: 30 }]
   }
 
   async signup (data: SignupInput) {
@@ -28,6 +28,8 @@ class MockApiClient implements ApiClient {
 
   async initiateLogin (handle: string) {
     const user = this.users.find(u => u.handle === handle)
+    if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 })
+
     const serverEphemeral = srp.generateEphemeral(user.srpVerifier)
     const id = uuid()
 
@@ -38,7 +40,11 @@ class MockApiClient implements ApiClient {
 
   async finalizeLogin (loginSessionId: string, { clientPublicEphemeral, clientSessionProof }: FinalizeLoginInput) {
     const { userId, serverEphemeral } = this.sessions[loginSessionId]
-    const { handle, dekSalt, srpSalt, srpVerifier, hasPaymentInformation, subscriptionStatus } = this.users.find(u => u.id === userId)
+
+    const user = this.users.find(u => u.id === userId)
+    if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 })
+
+    const { handle, dekSalt, srpSalt, srpVerifier, hasPaymentInformation, subscriptionStatus } = user
 
     const { proof } = srp.deriveSession(serverEphemeral.secret, clientPublicEphemeral, srpSalt, HumanFormat.toHex(handle), srpVerifier, clientSessionProof)
 
@@ -68,8 +74,11 @@ class MockApiClient implements ApiClient {
   }
 
   async setPaymentInformation (token: AuthToken, data: PaymentInformation) {
-    this.users.find(u => u.id === token).hasPaymentInformation = true
-    this.users.find(u => u.id === token).subscriptionStatus = 'active'
+    const user = this.users.find(u => u.id === token)
+    if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 })
+
+    user.hasPaymentInformation = true
+    user.subscriptionStatus = 'active'
 
     return { hasPaymentInformation: true, subscriptionStatus: 'active' as SubscriptionStatus, trialDaysLeft: 0 }
   }

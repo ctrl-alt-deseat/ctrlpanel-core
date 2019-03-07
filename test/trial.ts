@@ -24,7 +24,7 @@ describe('Trial', () => {
       assert.strictEqual(typeof plan.interval, 'string')
       assert.strictEqual(typeof plan.intervalCount, 'number')
       assert.strictEqual(typeof plan.stripeKey, 'string')
-      assert.strictEqual(plan.trialPeriodDays, null)
+      assert.strictEqual(typeof plan.trialPeriodDays, 'number')
     }
   })
 

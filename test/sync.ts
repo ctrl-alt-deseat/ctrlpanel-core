@@ -92,7 +92,7 @@ describe('Sync', () => {
   it('throws when sync would override stored credentials', async function () {
     assertRejects(
       coreA.init('05DK3C95SQM2TZAD8AP0NXPB5CT5GZSPC8438YSYBGRD0CBRF8BC'),
-      (err) => err.code === 'CONFLICTING_CREDENTIALS'
+      (err: any) => err.code === 'CONFLICTING_CREDENTIALS'
     )
   })
 })
