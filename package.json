@@ -14,19 +14,19 @@
     "posttest": "nyc report --reporter=html"
   },
   "dependencies": {
-    "@ctrlpanel/hkdf": "^1.0.0",
+    "@ctrlpanel/hkdf": "^1.0.1",
     "@ctrlpanel/pbkdf2": "^1.0.0",
     "@ctrlpanel/random-account-password": "^1.0.0",
     "array-buffer-to-hex": "^1.0.0",
     "base32-decode": "^1.0.0",
-    "base32-encode": "^1.0.0",
+    "base32-encode": "^1.1.1",
     "decode-utf8": "^1.0.1",
-    "encode-utf8": "^1.0.1",
-    "fast-json-patch": "^2.0.6",
+    "encode-utf8": "^1.0.2",
+    "fast-json-patch": "^2.0.7",
     "hex-to-array-buffer": "^1.1.0",
     "integer-array-ops": "^1.0.0",
     "secure-remote-password": "^0.3.1",
-    "uuid": "^3.2.1"
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@fanny-pack/core": "^1.0.0-beta.2",
